@@ -136,15 +136,56 @@ class user
   private:
     std::string email_;
     std::string username_;
+     // The password should be stored securely, e.g., hashed and salted.
+    // For simplicity, we are storing it as plain text here, which is not recommended in production code.
+    // In a real application, you would use a secure hashing algorithm like bcrypt or Argon2.
+    // and store the hash instead of the plain text password.
+    // You would also want to implement proper validation and error handling.
+    // Consider using a library like OpenSSL or libsodium for secure password hashing.
+    // You can also use a library like Crypto++ or Botan for cryptographic operations.      
     std::string password_;
+    // The pass_key is a technique to restrict the construction of a class to only certain friends.
+    // It is often used to enforce that only certain functions or classes can create instances of a class.
+    // It is a common pattern in C++ to control access to constructors and prevent misuse of the class.
+    // It is a way to implement the "pimpl" idiom or to restrict access to certain constructors.
+    // The pass_key class is a simple utility that allows only the specified type T to construct instances of the class that uses it.
+    std::string pub_key_;
+    std::string password_hash_;
+    std::string hash_password(const std::string& password) {
+            // Placeholder for actual hashing logic
+            return password; // In a real application, replace this with a secure hash
+        }
 
+    // std::string hash_password() const {
+    //     return hash_password(password_);
+    // }
+    std::string get_hashed_password() const {
+        return hash_password();
+    }
+
+    std::string get_password() const {
+        return password_;
+    }
+    std::string get_email() const {
+        return email_;
+    }
+    std::string get_username() const {
+        return username_;
+    }
+
+    std::string get_passkey() const {
+        return pub_key_;
+    }
   public:
     user() = default;
     user(std::string email, std::string username, std::string password)
-        : email_(std::move(email)), username_(std::move(username)), password_(std::move(password))
+        : email_(std::move(email)), username_(std::move(username)), password_(std::move(password)), pub_key_(std::move(pub_key_)) // Placeholder for public key
     {}
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(user, email_, username_, password_)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(user, email_, username_, password_, pub_key )
+    // NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(user, email_, username_, password_, pass_key)
+    // NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(user, email_, username_, password_)
+    // NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(user, email_, username_, password_hash)
 };
 } // namespace ns
 
