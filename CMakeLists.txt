@@ -4,6 +4,18 @@ project("Asynchronous Programming in C++")
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+# Set the C++ compiler flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
+# Set the C++ compiler flags for warnings
+if((CMAKE_CXX_COMPILER_ID MATCHES GNU) OR (CMAKE_CXX_COMPILER_ID MATCHES Clang))
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter -Wno-unused-variable")
+endif()
+
+# Linker flags
+if((CMAKE_CXX_COMPILER_ID MATCHES GNU) OR (CMAKE_CXX_COMPILER_ID MATCHES Clang))
+    set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS} -O0 -g3 -Wall -Wextra -pedantic")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG -Wall -Wextra -pedantic")
+endif()
 
 # Find Boost
 find_package(Boost 1.88.0 REQUIRED COMPONENTS thread system container)
@@ -31,11 +43,18 @@ if(NOT fmt_FOUND)
     message(FATAL_ERROR "fmt library is required but not found.")
 endif()
 
-# Linker flags
-if((CMAKE_CXX_COMPILER_ID MATCHES GNU) OR (CMAKE_CXX_COMPILER_ID MATCHES Clang))
-    set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS} -O0 -g3 -Wall -Wextra -pedantic")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG -Wall -Wextra -pedantic")
-endif()
+set(JSON_Install OFF CACHE INTERNAL "")
+
+# add_subdirectory($PROJ/thirdparty/nlohmann-json/nlohmann-json)
+
+add_subdirectory(third-party/json)
+#     ${CMAKE_BINARY_DIR}/third-party/json)
+# if(NOT nlohmann_json_FOUND)
+#     message(FATAL_ERROR "nlohmann_json library is required but not found.")
+# endif()
+
+# # Include nlohmann_json directories
+include_directories(${nlohmann_json_INCLUDE_DIRS})
 
 # Set the output directory for binaries
 set(BINARY_DIR ${CMAKE_BINARY_DIR}/bin)
@@ -50,5 +69,13 @@ foreach(SOURCE ${SOURCES})
     message(${EXECUTABLE_NAME})
     add_executable(${EXECUTABLE_NAME} ${SOURCE})
     target_link_libraries(${EXECUTABLE_NAME} ${Boost_LIBRARIES})
+    target_link_libraries(${EXECUTABLE_NAME} GTest::gtest GTest::gtest_main)
+    target_link_libraries(${EXECUTABLE_NAME} fmt::fmt)
+    target_link_libraries(${EXECUTABLE_NAME} nlohmann_json::nlohmann_json)
+    set_target_properties(${EXECUTABLE_NAME} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        CXX_STANDARD 20
+        CXX_STANDARD_REQUIRED ON
+    )
 endforeach()
 
