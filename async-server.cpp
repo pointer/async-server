@@ -61,11 +61,13 @@ boost::asio::awaitable<void> echo(tcp::socket socket) {
     std::size_t bytes_read = co_await socket.async_read_some(boost::asio::buffer(data), boost::asio::use_awaitable);
     std::string username(data, bytes_read);
     username.erase(username.find_last_not_of("\r\n") + 1);
+    std::cout << ">>>> Reading username ..." << username <<"\n";
     prompt = "Password: ";
     co_await boost::asio::async_write(socket, boost::asio::buffer(prompt), boost::asio::use_awaitable);
     bytes_read = co_await socket.async_read_some(boost::asio::buffer(data), boost::asio::use_awaitable);
     std::string password(data, bytes_read);
     password.erase(password.find_last_not_of("\r\n") + 1);
+    std::cout << ">>>> Reading password ..." << password <<"\n";    
     if (username != valid_username || password != valid_password) {
         std::string fail = "Authentication failed. Closing connection.\n";
         co_await boost::asio::async_write(socket, boost::asio::buffer(fail), boost::asio::use_awaitable);
@@ -94,7 +96,7 @@ boost::asio::awaitable<void> echo(tcp::socket socket) {
         if (!str.empty() && str.back() == '\r') {
             str.pop_back();
         }
-
+        std::cout << "Reading str ..." << str <<"\n";
         // If the client send QUIT, the server closes the connection
         if (str == "QUIT") {
             std::string bye("Good bye!\n");
