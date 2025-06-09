@@ -155,6 +155,18 @@ class user
             // Placeholder for actual hashing logic
             return password; // In a real application, replace this with a secure hash
         }
+    
+    // std::string hash_password(const std::string& password) {
+    //     // Placeholder for actual hashing logic     
+    //     return password; // In a real application, replace this with a secure hash
+    // }
+ 
+  public:
+    user() = default;
+    user(std::string email, std::string username, std::string password)
+        : email_(std::move(email)), username_(std::move(username)), 
+            password_(std::move(password)), pub_key_(std::move(pub_key)) // Placeholder for public key
+    {}
 
     // std::string hash_password() const {
     //     return hash_password(password_);
@@ -176,11 +188,24 @@ class user
     std::string get_passkey() const {
         return pub_key_;
     }
-  public:
-    user() = default;
-    user(std::string email, std::string username, std::string password)
-        : email_(std::move(email)), username_(std::move(username)), password_(std::move(password)), pub_key_(std::move(pub_key_)) // Placeholder for public key
-    {}
+
+    void set_hashed_password() const {
+        
+    }
+
+    void set_password() const {
+        
+    }
+    void set_email() const {
+        // Placeholder for setting email logic
+    }
+    void set_username() const {
+        // Placeholder for setting username logic
+    }
+
+    void set_passkey() const {
+        // Placeholder for setting public key logic
+    }
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(user, email_, username_, password_, pub_key )
     // NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(user, email_, username_, password_, pass_key)
