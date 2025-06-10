@@ -34,6 +34,12 @@ if(NOT GTest_FOUND)
 endif()
 include(GoogleTest)
 
+find_package(nlohmann_json 3.11.3 REQUIRED)
+if(NOT nlohmann_json_FOUND)
+    message(FATAL_ERROR "nlohmann_json library is required but not found.")
+endif()
+# Include nlohmann_json directories
+include_directories(${nlohmann_json_INCLUDE_DIRS})
 # Include GoogleTest directories
 include_directories(${GTest_INCLUDE_DIRS})
 
@@ -47,14 +53,14 @@ set(JSON_Install OFF CACHE INTERNAL "")
 
 # add_subdirectory($PROJ/thirdparty/nlohmann-json/nlohmann-json)
 
-add_subdirectory(third-party/json)
+# include_directories(../third-party/json)
 #     ${CMAKE_BINARY_DIR}/third-party/json)
 # if(NOT nlohmann_json_FOUND)
 #     message(FATAL_ERROR "nlohmann_json library is required but not found.")
 # endif()
 
 # # Include nlohmann_json directories
-include_directories(${nlohmann_json_INCLUDE_DIRS})
+# include_directories(${nlohmann_json_INCLUDE_DIRS})
 
 # Set the output directory for binaries
 set(BINARY_DIR ${CMAKE_BINARY_DIR}/bin)

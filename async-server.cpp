@@ -120,15 +120,6 @@ public:
   // }
 };
 
-template <typename T>class pass_key{  friend T;    explicit pass_key() = default;};
-
-class special {
-    public:    special(pass_key<special>, int x);    
-    static std::unique_ptr<special> make(int x){        
-            return std::make_unique<special>(pass_key<special>{}, x);    
-        }
-    };
-
 namespace ns
 {
 class user
@@ -163,7 +154,7 @@ class user
  
   public:
     user() = default;
-    user(std::string email, std::string username, std::string password)
+    user(std::string email, std::string username, std::string password, std::string pub_key)
         : email_(std::move(email)), username_(std::move(username)), 
             password_(std::move(password)), pub_key_(std::move(pub_key)) // Placeholder for public key
     {}
@@ -172,7 +163,7 @@ class user
     //     return hash_password(password_);
     // }
     std::string get_hashed_password() const {
-        return hash_password();
+        return  "" ; //hash_password();
     }
 
     std::string get_password() const {
@@ -207,7 +198,7 @@ class user
         // Placeholder for setting public key logic
     }
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(user, email_, username_, password_, pub_key )
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(user, email_, username_, password_, pub_key_)
     // NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(user, email_, username_, password_, pass_key)
     // NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(user, email_, username_, password_)
     // NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(user, email_, username_, password_hash)
@@ -223,9 +214,8 @@ public:
     // bool register_user(const std::string& email, const std::string& username, const std::string& password) {
     bool register_user(ns::user user) {
         json user_json = user; // Convert user to JSON
-        std::cout << "serialization: " << user_json << std::endl;
         std::string username = user_json["username_"].get<std::string>();
-         std::cout << "serialization: " << user_json << std::endl;
+        //  std::cout << "serialization: " << user_json << std::endl;
         std::lock_guard<std::mutex> lock(mutex_);
         if (users_.count(username)) return false; // Already registered
         users_[username] = user_json; // Store user with email, username, and password
@@ -264,7 +254,7 @@ boost::asio::awaitable<void> handler(tcp::socket socket) {
     }
     std::cout << "Connection established. Waiting for authentication or registration...\n";
 
-    std::string email, username, password;
+    std::string email, username, password, public_key;
     std::size_t bytes_read = co_await socket.async_read_some(boost::asio::buffer(data), boost::asio::use_awaitable);
     if (bytes_read == 0) {
         std::cout << "No data received. Closing connection.\n";
@@ -288,7 +278,8 @@ boost::asio::awaitable<void> handler(tcp::socket socket) {
         pos = username_pass.find(',');
         username = username_pass.substr(0, pos);
         password = username_pass.substr(pos + 1);        
-        ns::user p = {email, username, password};
+        public_key = username_pass.substr(pos + 1);          
+        ns::user p(email, username, password, public_key); // Placeholder for public key
         if (UserManager::instance().register_user(p)) {
             std::string success = "Registration successful. You can now login.\n";
             co_await boost::asio::async_write(socket, boost::asio::buffer(success), boost::asio::use_awaitable);
