@@ -85,21 +85,26 @@ set(BINARY_DIR ${CMAKE_BINARY_DIR}/bin)
 # Output directory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BINARY_DIR}/Output)
 
-# Create executable for each cpp file
-file(GLOB SOURCES "*.cpp")
-foreach(SOURCE ${SOURCES})
-    get_filename_component(EXECUTABLE_NAME ${SOURCE} NAME_WE)
-    message(${EXECUTABLE_NAME})
-    add_executable(${EXECUTABLE_NAME} ${SOURCE})
-    target_link_libraries(${EXECUTABLE_NAME} ${Boost_LIBRARIES})
-    target_link_libraries(${EXECUTABLE_NAME} GTest::gtest GTest::gtest_main)
-    target_link_libraries(${EXECUTABLE_NAME} fmt::fmt)
-    target_link_libraries(${EXECUTABLE_NAME} nlohmann_json::nlohmann_json)
-    target_link_libraries(${EXECUTABLE_NAME} yescrypt)    
-    set_target_properties(${EXECUTABLE_NAME} PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        CXX_STANDARD 20
-        CXX_STANDARD_REQUIRED ON
-    )
-endforeach()
+# Create executable for async-server that includes all source files
+add_executable(async-server
+    async-server.cpp
+    UserManager.cpp
+    SessionManager.cpp
+    LogFile.cpp
+    user.cpp
+)
+
+target_link_libraries(async-server
+    ${Boost_LIBRARIES}
+    GTest::gtest GTest::gtest_main
+    fmt::fmt
+    nlohmann_json::nlohmann_json
+    yescrypt
+)
+
+set_target_properties(async-server PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+)
 
