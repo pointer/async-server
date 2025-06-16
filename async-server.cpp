@@ -11,6 +11,11 @@
 #include <vector>
 #include <fstream>
 #include <nlohmann/json.hpp>
+extern "C" {
+#include "yescrypt.h"
+}
+
+#define YESCRYPT_P 1
 
 // for convenience
 using json = nlohmann::json;
@@ -84,7 +89,8 @@ private:
 // It is often used to enforce that only certain functions or classes can create instances of a class.
 // This is a common pattern in C++ to control access to constructors and prevent misuse of the class.
 // It is a way to implement the "pimpl" idiom or to restrict access to certain constructors.
-// The pass_key class is a simple utility that allows only the specified type T to construct instances of the class that uses it.
+// The pass_key class is a simple utility that allows only the specified type T to construct instances of 
+// the class that uses it.
 template <typename T>class pass_key{  friend T;    explicit pass_key() = default;};
 // The special class is an example of a class that uses the pass_key technique to restrict its constructor.
 class special {
@@ -127,6 +133,8 @@ class user
   private:
     std::string email_;
     std::string username_;
+    std::string salt_{"SodiumChloride"} ; // The salt is used to hash the password securely.
+    // The salt is a random value that is used to hash the password securely.
      // The password should be stored securely, e.g., hashed and salted.
     // For simplicity, we are storing it as plain text here, which is not recommended in production code.
     // In a real application, you would use a secure hashing algorithm like bcrypt or Argon2.
@@ -140,7 +148,7 @@ class user
     // It is a common pattern in C++ to control access to constructors and prevent misuse of the class.
     // It is a way to implement the "pimpl" idiom or to restrict access to certain constructors.
     // The pass_key class is a simple utility that allows only the specified type T to construct instances of the class that uses it.
-    std::string pub_key_;
+    std::string public_pass_key_;
     std::string password_hash_;
     std::string hash_password(const std::string& password) {
             // Placeholder for actual hashing logic
@@ -154,9 +162,9 @@ class user
  
   public:
     user() = default;
-    user(std::string email, std::string username, std::string password, std::string pub_key)
+    user(std::string email, std::string username, std::string password, std::string public_pass_key)
         : email_(std::move(email)), username_(std::move(username)), 
-            password_(std::move(password)), pub_key_(std::move(pub_key)) // Placeholder for public key
+            password_(std::move(password)), public_pass_key_(std::move(public_pass_key)) // Placeholder for public key
     {}
 
     // std::string hash_password() const {
@@ -176,8 +184,8 @@ class user
         return username_;
     }
 
-    std::string get_passkey() const {
-        return pub_key_;
+    std::string get_public_pass_key() const {
+        return public_pass_key_;
     }
 
     void set_hashed_password() const {
@@ -194,11 +202,49 @@ class user
         // Placeholder for setting username logic
     }
 
-    void set_passkey() const {
+    void set_public_pass_key() const {
         // Placeholder for setting public key logic
     }
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(user, email_, username_, password_, pub_key_)
+    // Modern C++ yescrypt password hashing function
+    // Returns the hash as a std::string, or empty string on error
+    std::string yescrypt_password(const std::string& password, const std::string& salt) {
+        yescrypt_local_t local;
+        if (yescrypt_init_local(&local)) {
+            std::cerr << "yescrypt_init_local() FAILED" << std::endl;
+            return "";
+        }
+        yescrypt_params_t params = {
+            YESCRYPT_DEFAULTS, // flags
+            1 << 14,           // N (memory cost, 16384)
+            8,                 // r (block size)
+            1,                 // p (parallelism)
+            0, 0, 0            // t, g, dkLen (not used)
+        };
+        // yescrypt hash output buffer
+        char hash[128] = {0};
+        // Use yescrypt_kdf for password hashing
+        int result = yescrypt_kdf(
+            nullptr, // shared context (not used)
+            &local,  // local context
+            reinterpret_cast<const uint8_t*>(password.data()), password.size(),
+            reinterpret_cast<const uint8_t*>(salt.data()), salt.size(),
+            &params,
+            reinterpret_cast<uint8_t*>(hash), sizeof(hash)
+        );
+        yescrypt_free_local(&local);
+        if (result) {
+            std::cerr << "yescrypt_kdf() FAILED" << std::endl;
+            return "";
+        }
+        // Return the hash as a hex string
+        std::ostringstream oss;
+        for (size_t i = 0; i < 64; ++i) // 64 bytes = 512 bits
+            oss << std::hex << std::setw(2) << std::setfill('0') << (static_cast<unsigned>(static_cast<uint8_t>(hash[i])));
+        return oss.str();
+    }
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(user, email_, username_, password_, public_pass_key_)
     // NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(user, email_, username_, password_, pass_key)
     // NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(user, email_, username_, password_)
     // NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(user, email_, username_, password_hash)
@@ -213,13 +259,23 @@ public:
     }
     // bool register_user(const std::string& email, const std::string& username, const std::string& password) {
     bool register_user(ns::user user) {
+        std::lock_guard<std::mutex> lock(mutex_);        
         json user_json = user; // Convert user to JSON
-        std::string username = user_json["username_"].get<std::string>();
+        std::string username = user_json["username_"].get<std::string>();        
+        std::string password = user_json["password_"].get<std::string>();
+        std::string email = user_json["email_"].get<std::string>();
+        std::string public_pass_key = user_json["public_pass_key_"].get<std::string>();        
         //  std::cout << "serialization: " << user_json << std::endl;
-        std::lock_guard<std::mutex> lock(mutex_);
+
         if (users_.count(username)) return false; // Already registered
-        users_[username] = user_json; // Store user with email, username, and password
+        // users_[username] = user_json; // Store user with email, username, and password
+        users_.emplace(username, user); // Store user object
         // users_[username] = password;
+        for (auto& element : users_) {
+            std::cout << "User: " << element.first << ", Email: " << element.second.get_email() 
+                      << ", Password: " << element.second.get_password() 
+                      << ", Public Key: " << element.second.get_public_pass_key() << std::endl;
+        }
         return true;
     }
     bool is_registered(const std::string& username) {
@@ -372,7 +428,7 @@ boost::asio::awaitable<void> handler(tcp::socket socket) {
         ss_log_message.str(""); // Clear the stringstream
         ss_log_message.clear(); // Clear any error flags
         // Log the data received
-        ss_log_message << "User: " << username << ", id=" << session_id << "Data : " << str
+        ss_log_message << "User: " << username << ", id= " << session_id << ", " << "Data: " << str
             << ", time=" << std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()) << "\n";
         // std::string log_message = ss_log_message.str();
         std::future<void> futre = std::async(&LogFile::shared_print, &log, ss_log_message.str());

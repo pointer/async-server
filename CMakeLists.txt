@@ -62,6 +62,23 @@ set(JSON_Install OFF CACHE INTERNAL "")
 # # Include nlohmann_json directories
 # include_directories(${nlohmann_json_INCLUDE_DIRS})
 
+# Add yescrypt library
+add_library(yescrypt STATIC
+    yescrypt-1.1.0/yescrypt-common.c
+    yescrypt-1.1.0/yescrypt-opt.c
+    yescrypt-1.1.0/yescrypt-platform.c
+    yescrypt-1.1.0/yescrypt-ref.c
+    yescrypt-1.1.0/sha256.c
+    yescrypt-1.1.0/insecure_memzero.c
+)
+
+target_include_directories(yescrypt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/yescrypt-1.1.0)
+# Set the output directory for yescrypt library
+set_target_properties(yescrypt PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
 # Set the output directory for binaries
 set(BINARY_DIR ${CMAKE_BINARY_DIR}/bin)
 
@@ -78,6 +95,7 @@ foreach(SOURCE ${SOURCES})
     target_link_libraries(${EXECUTABLE_NAME} GTest::gtest GTest::gtest_main)
     target_link_libraries(${EXECUTABLE_NAME} fmt::fmt)
     target_link_libraries(${EXECUTABLE_NAME} nlohmann_json::nlohmann_json)
+    target_link_libraries(${EXECUTABLE_NAME} yescrypt)    
     set_target_properties(${EXECUTABLE_NAME} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         CXX_STANDARD 20
